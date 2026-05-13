@@ -355,7 +355,16 @@ export default function App() {
 
       const json = await res.json();
 
-      setData(json);
+      const cleaned = json.map((r) => ({
+  category: r["Category"] || "",
+  task: r["Task / Site"] || "",
+  owner: r["Owner"] || "",
+  nextMeeting: r["Next Meeting"] || "",
+  dueDate: r["Due Date"] || "",
+  status: r["Status"] || "",
+  priority: r["Priority"] || "",
+  remarks: r["Full Remarks Log"] || "",
+}));
     } catch (e) {
       console.error(e);
     } finally {
