@@ -2,7 +2,6 @@
   "name": "gh2-warroom-dashboard",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://taaruntd.github.io/gh2-warroom",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
