@@ -462,7 +462,9 @@ export default function App() {
       const res = await fetch(DATA_URL + "?t=" + Date.now());
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
+      console.log(json);
       // handle both key formats (camelCase from PA or direct)
+      const rows = Array.isArray(json) ? json : json.value || [];
       const cleaned = json.map((r) => ({
         category: r.category || r["Category"] || "",
         task: r.task || r["Task / Site"] || "",
