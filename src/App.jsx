@@ -102,7 +102,7 @@ const CATS = [
 
 const DATA_URL =
   "https://raw.githubusercontent.com/taaruntd/gh2-warroom-data/main/data/tracker.json";
-const REFRESH_MS = 5 * 60 * 1000;
+const REFRESH_MS = 30 * 60 * 1000;
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
 async function downloadPDF(data, filters) {
@@ -136,7 +136,7 @@ async function downloadPDF(data, filters) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
-  doc.text("GH2 SOLAR Tracker", 105, 18, { align: "center" });
+  doc.text("GH2 SOLAR — TRACKER", 105, 18, { align: "center" });
   doc.setFillColor(240, 245, 214);
   doc.rect(10, 22, PW, 7, "F");
   doc.setFont("helvetica", "normal");
@@ -228,26 +228,41 @@ async function downloadPDF(data, filters) {
           if (d.column.index === 0 && row.priority === "Push")
             d.cell.styles.textColor = AMBER;
           if (d.column.index === 3 && row.dueDate) {
-            const m = {
-              Jan: 0,
-              Feb: 1,
-              Mar: 2,
-              Apr: 3,
-              May: 4,
-              Jun: 5,
-              Jul: 6,
-              Aug: 7,
-              Sep: 8,
-              Oct: 9,
-              Nov: 10,
-              Dec: 11,
+            const pDate = (s) => {
+              if (!s || s === "—") return null;
+              const m = {
+                Jan: 0,
+                Feb: 1,
+                Mar: 2,
+                Apr: 3,
+                May: 4,
+                Jun: 5,
+                Jul: 6,
+                Aug: 7,
+                Sep: 8,
+                Oct: 9,
+                Nov: 10,
+                Dec: 11,
+              };
+              const p1 = s.match(/^(\d{1,2})[\-\/](\w{3})[\-\/](\d{2,4})$/);
+              if (p1) {
+                const yr =
+                  p1[3].length === 2 ? 2000 + parseInt(p1[3]) : parseInt(p1[3]);
+                return new Date(yr, m[p1[2]], parseInt(p1[1]));
+              }
+              const p2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (p2)
+                return new Date(
+                  parseInt(p2[1]),
+                  parseInt(p2[2]) - 1,
+                  parseInt(p2[3])
+                );
+              const dt = new Date(s);
+              return isNaN(dt) ? null : dt;
             };
-            const p = row.dueDate.split("-");
-            if (p.length >= 3) {
-              const diff =
-                (new Date(parseInt("20" + p[2]), m[p[1]], parseInt(p[0])) -
-                  new Date()) /
-                86400000;
+            const dd = pDate(row.dueDate);
+            if (dd) {
+              const diff = (dd - new Date()) / 86400000;
               if (diff < 0) d.cell.styles.textColor = RED;
               else if (diff <= 3) d.cell.styles.textColor = AMBER;
             }
@@ -266,7 +281,7 @@ async function downloadPDF(data, filters) {
     doc.setFontSize(7);
     doc.setTextColor(170, 170, 170);
     doc.text(
-      `GH2 Solar Limited  ·  Minutes  ·  ${today}  ·  Prepared by Taarun Dhingra  ·  Page ${i} of ${pc}`,
+      `GH2 Solar Limited  ·  Task Tracker  ·  ${today}  ·  Prepared by Taarun Dhingra  ·  Page ${i} of ${pc}`,
       105,
       292,
       { align: "center" }
@@ -276,8 +291,9 @@ async function downloadPDF(data, filters) {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-function dueClass(due) {
-  if (!due || due === "—") return null;
+function parseDate(due) {
+  if (!due || due === "—" || due === "-" || due === "") return null;
+  // Format 1: 11-May-26 or 11-May-2026
   const m = {
     Jan: 0,
     Feb: 1,
@@ -292,11 +308,29 @@ function dueClass(due) {
     Nov: 10,
     Dec: 11,
   };
-  const p = due.split("-");
-  if (p.length < 3) return null;
-  const diff =
-    (new Date(parseInt("20" + p[2]), m[p[1]], parseInt(p[0])) - new Date()) /
-    86400000;
+  const p1 = due.match(/^(\d{1,2})[\-\/](\w{3})[\-\/](\d{2,4})$/);
+  if (p1) {
+    const yr = p1[3].length === 2 ? 2000 + parseInt(p1[3]) : parseInt(p1[3]);
+    return new Date(yr, m[p1[2]], parseInt(p1[1]));
+  }
+  // Format 2: ISO 2026-05-11 or 2026-05-11T00:00:00Z
+  const p2 = due.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (p2)
+    return new Date(parseInt(p2[1]), parseInt(p2[2]) - 1, parseInt(p2[3]));
+  // Format 3: 11/05/2026 or 11/05/26
+  const p3 = due.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})$/);
+  if (p3) {
+    const yr = p3[3].length === 2 ? 2000 + parseInt(p3[3]) : parseInt(p3[3]);
+    return new Date(yr, parseInt(p3[2]) - 1, parseInt(p3[1]));
+  }
+  // Fallback: let JS try
+  const d = new Date(due);
+  return isNaN(d) ? null : d;
+}
+function dueClass(due) {
+  const d = parseDate(due);
+  if (!d) return null;
+  const diff = (d - new Date()) / 86400000;
   return diff < 0 ? "overdue" : diff <= 3 ? "soon" : null;
 }
 
@@ -446,7 +480,7 @@ export default function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastSync, setLastSync] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [fCat, setFCat] = useState("");
   const [fOwner, setFOwner] = useState("");
   const [fStatus, setFStatus] = useState("");
@@ -462,9 +496,7 @@ export default function App() {
       const res = await fetch(DATA_URL + "?t=" + Date.now());
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
-      console.log(json);
       // handle both key formats (camelCase from PA or direct)
-      const rows = Array.isArray(json) ? json : json.value || [];
       const cleaned = json.map((r) => ({
         category: r.category || r["Category"] || "",
         task: r.task || r["Task / Site"] || "",
@@ -477,7 +509,10 @@ export default function App() {
         lastUpdated: r.lastUpdated || r["Last Updated"] || "",
       }));
       setData(cleaned);
-      setLastSync(new Date());
+      console.log("DEBUG dueDate sample:", cleaned[0]?.dueDate);
+      console.log("DEBUG lastUpdated sample:", cleaned[0]?.lastUpdated);
+      const dates = cleaned.map((r) => r.lastUpdated).filter(Boolean);
+      if (dates.length) setLastUpdated(dates[0]);
       setError(null);
     } catch (e) {
       setError("Could not load live data — showing cached view");
@@ -643,7 +678,7 @@ export default function App() {
                   letterSpacing: "-0.3px",
                 }}
               >
-                Tracker
+                Task Tracker
               </div>
               <div
                 style={{
@@ -652,9 +687,18 @@ export default function App() {
                   marginTop: 2,
                 }}
               >
-                {lastSync
-                  ? `Synced ${lastSync.toLocaleTimeString()} · Auto-refreshes every 5 min`
-                  : "Connecting..."}
+                {lastUpdated
+                  ? (() => {
+                      const d = new Date(lastUpdated);
+                      return isNaN(d)
+                        ? `Updated: ${lastUpdated} · Auto-refreshes every 30 min`
+                        : `${d.toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })} · Auto-refreshes every 30 min`;
+                    })()
+                  : "Auto-refreshes every 30 min"}
               </div>
             </div>
           </div>
@@ -719,7 +763,7 @@ export default function App() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(5,1fr)",
+            gridTemplateColumns: "repeat(4,1fr)",
             gap: 10,
             marginBottom: 14,
           }}
@@ -751,13 +795,6 @@ export default function App() {
             color={B.red}
             icon="⚠️"
             sub="past due date"
-          />
-          <KPICard
-            label="Completed"
-            value={doneTotal}
-            color={B.green}
-            icon="✅"
-            sub="done this cycle"
           />
         </div>
 
@@ -1150,7 +1187,7 @@ export default function App() {
             textAlign: "center",
           }}
         >
-          GH2 Solar Limited · Tracker · Data: SharePoint → Power Automate →
+          GH2 Solar Limited · Task Tracker · Data: SharePoint → Power Automate →
           GitHub · Confidential
         </div>
       </div>
