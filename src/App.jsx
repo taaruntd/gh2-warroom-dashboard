@@ -112,9 +112,17 @@ async function downloadPDF(data, filters) {
     y += 9;
     const tableRows = catRows.map(r => {
       const remarkLines = (r.remarks||"").split("\n").filter(Boolean);
-      const remarkStr = remarkLines.slice(-3).join("\n");
+      // Sort by date prefix so latest is always last
+      const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+      const parseEntryDate = (line) => {
+        const p = line.match(/(\d{1,2})[\-\/](\w{3})/);
+        return p ? (months[p[2]]||0)*100 + parseInt(p[1]) : 0;
+      };
+      const sorted = [...remarkLines].sort((a,b) => parseEntryDate(a) - parseEntryDate(b));
+      // Show last 3 sorted entries in PDF
+      const remarkStr = sorted.slice(-3).join("\n");
       const flagIcon = r.priority==="Critical"?"! ":r.priority==="Push"?"> ":"";
-      return [flagIcon+(r.task||""), r.owner||"—", remarkStr||"—", r.dueDate||"—"];
+      return [flagIcon+(r.task||""), r.owner||"—", remarkStr||"—", fmtDate(r.dueDate)];
     });
     autoTable(doc, {
       startY: y,
@@ -136,16 +144,7 @@ async function downloadPDF(data, filters) {
           if (d.column.index===0 && row.priority==="Critical") d.cell.styles.textColor=RED;
           if (d.column.index===0 && row.priority==="Push") d.cell.styles.textColor=AMBER;
           if (d.column.index===3 && row.dueDate) {
-            const pDate = (s) => {
-              if (!s||s==="—") return null;
-              const m={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-              const p1=s.match(/^(\d{1,2})[\-\/](\w{3})[\-\/](\d{2,4})$/);
-              if (p1){const yr=p1[3].length===2?2000+parseInt(p1[3]):parseInt(p1[3]);return new Date(yr,m[p1[2]],parseInt(p1[1]));}
-              const p2=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-              if (p2) return new Date(parseInt(p2[1]),parseInt(p2[2])-1,parseInt(p2[3]));
-              const dt=new Date(s); return isNaN(dt)?null:dt;
-            };
-            const dd = pDate(row.dueDate);
+            const dd = parseDate(row.dueDate);
             if (dd) {
               const diff=(dd-new Date())/86400000;
               if (diff<0) d.cell.styles.textColor=RED;
