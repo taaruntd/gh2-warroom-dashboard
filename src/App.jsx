@@ -88,7 +88,7 @@ async function downloadPDF(data, filters) {
   doc.setFillColor(...NAVY);
   doc.rect(10,10,PW,12,"F");
   doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(255,255,255);
-  doc.text("GH2 SOLAR — WAR ROOM MOM", 105, 18, { align:"center" });
+  doc.text("GH2 SOLAR — Task MOM", 105, 18, { align:"center" });
   doc.setFillColor(240,245,214);
   doc.rect(10,22,PW,7,"F");
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90,107,74);
@@ -160,7 +160,7 @@ async function downloadPDF(data, filters) {
   const pc = doc.getNumberOfPages();
   for (let i=1;i<=pc;i++) {
     doc.setPage(i); doc.setFontSize(7); doc.setTextColor(170,170,170);
-    doc.text(`GH2 Solar Limited  ·  War Room MOM  ·  ${today}  ·  Prepared by Taarun Dhingra  ·  Page ${i} of ${pc}`, 105, 292, { align:"center" });
+    doc.text(`GH2 Solar Limited  ·  Task MOM  ·  ${today}  ·  Prepared by Taarun Dhingra  ·  Page ${i} of ${pc}`, 105, 292, { align:"center" });
   }
   doc.save(`GH2_Tracker_MOM_${today.replace(/ /g,"-")}.pdf`);
 }
@@ -401,7 +401,7 @@ export default function App() {
             }}>GH2<br/>SOLAR</div>
             <div>
               <div style={{ fontSize:18, fontWeight:700, color:B.white, letterSpacing:"-0.3px" }}>
-                War Room Tracker
+                Task Tracker
               </div>
               <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)", marginTop:2 }}>
                 {lastUpdated
@@ -580,7 +580,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop:12, fontSize:11, color:B.muted, textAlign:"center" }}>
-          GH2 Solar Limited  ·  War Room Tracker  ·  Data: SharePoint → Power Automate → GitHub  ·  Confidential
+          GH2 Solar Limited  ·  Task Tracker  ·
         </div>
       </div>
     </div>
